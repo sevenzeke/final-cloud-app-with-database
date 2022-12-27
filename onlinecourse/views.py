@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http import HttpResponseRedirect
 # <HINT> Import any new Models here
-from .models import Course, Enrollment
+from .models import Course, Enrollment, Question, Choice, Submission
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
@@ -11,7 +11,6 @@ import logging
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
 # Create your views here.
-
 
 def registration_request(request):
     context = {}
@@ -112,6 +111,57 @@ def enroll(request, course_id):
          # Redirect to show_exam_result with the submission id
 #def submit(request, course_id):
 
+def extract_answers(request):
+    submitted_anwsers = []
+    for key in request.POST:
+        if key.startswith('choice'):
+            value = request.POST[key]
+            choice_id = int(value)
+            submitted_anwsers.append(choice_id)
+    return submitted_anwsers
+
+def submit(request, course_id):
+    course = get_object_or_404(Course, pk=course_id)
+    user = request.user
+    choices = extract_answers(request=request)
+    if user is not None:
+        enrollment = Enrollment.objects.get(user=user, course=course)
+        Submission.objects.create(enrollment=enrollment,choices=choices)
+    
+def show_exam_result(request, course_id, submission_id):
+    course = get_object_or_404(Course, pk=course_id)
+    submission = get_object_or_404(Submission, pk=submission_id)
+    question = Question.objects.filter(course=course)
+    choices = submission.choices.all()
+    
+    context = {}
+    choice_correct = []
+    choice_incorrect = []
+    choice_not_selected = []
+
+    for qtn in question:
+        correct_choice.append(qtn.choice_set.filter(is_correct=True))
+
+    for choice in choice_correct:
+        if choice not in choices:
+            choice_not_selected.append(choice)
+
+    for choice in choices:
+        if choice.is_correct == False:
+            choice_incorrect.append(choice)
+    
+    grade = 0
+    answers = choices.count()-len(choice_not_selected)-len(choice_incorrect)
+    if answers > 0:
+        grade = answers/len(correct_choice)*100
+
+    context['grade'] = grade
+    context['choice_not_selected'] = choice_not_selected
+    context['choice_incorrect'] = choice_incorrect
+
+    return render(request, 'onlinecourse/exam_result_bootstrap.html', context)
+    
+    
 
 # <HINT> A example method to collect the selected choices from the exam form from the request object
 #def extract_answers(request):
