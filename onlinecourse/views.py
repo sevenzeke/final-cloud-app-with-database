@@ -124,40 +124,52 @@ def submit(request, course_id):
     course = get_object_or_404(Course, pk=course_id)
     user = request.user
     choices = extract_answers(request=request)
-    if user is not None:
-        enrollment = Enrollment.objects.get(user=user, course=course)
-        Submission.objects.create(enrollment=enrollment,choices=choices)
-    
+    enrollment = Enrollment.objects.get(user=user, course=course)
+    submission = Submission.objects.create(enrollment=enrollment)
+    submission.choices.set(choices)
+    return HttpResponseRedirect(reverse(viewname='onlinecourse:show_exam_result', args=(course_id, submission.id)))
+
 def show_exam_result(request, course_id, submission_id):
     course = get_object_or_404(Course, pk=course_id)
     submission = get_object_or_404(Submission, pk=submission_id)
-    question = Question.objects.filter(course=course)
+    questions = Question.objects.filter(course=course)
     choices = submission.choices.all()
     
     context = {}
-    choice_correct = []
-    choice_incorrect = []
-    choice_not_selected = []
-
-    for qtn in question:
-        correct_choice.append(qtn.choice_set.filter(is_correct=True))
-
-    for choice in choice_correct:
-        if choice not in choices:
-            choice_not_selected.append(choice)
-
-    for choice in choices:
-        if choice.is_correct == False:
-            choice_incorrect.append(choice)
-    
+    correct_choices = []
+    selected_choices = []
+    unselected_choices = []
+    total_points = 0
+    overall_points = 0
     grade = 0
-    answers = choices.count()-len(choice_not_selected)-len(choice_incorrect)
-    if answers > 0:
-        grade = answers/len(correct_choice)*100
+
+    for q in questions:
+        overall_points = overall_points + q.grade
+        q_choices = Choice.objects.filter(question=q,is_correct=1)
+        for c in q_choices:
+            correct_choices.append(c)
+
+    for q in questions:
+        q_choices = Choice.objects.filter(question=q,is_correct=1)
+        for c in choices:
+            if q == c.question:
+                if c in q_choices:
+                    selected_choices.append(c)
+                    total_points = total_points + (q.grade / len(q_choices))
+                else:
+                    unselected_choices.append(c)
+                    total_points = total_points - (q.grade / len(q_choices))
+    
+    if total_points > 0:
+        grade = (total_points/overall_points)*100
+    elif total_points <= 0:
+        grade = 0
 
     context['grade'] = grade
-    context['choice_not_selected'] = choice_not_selected
-    context['choice_incorrect'] = choice_incorrect
+    context['correct_choices'] = correct_choices
+    context['selected_choices'] = selected_choices
+    context['unselected_choices'] = unselected_choices
+    context['course'] = course
 
     return render(request, 'onlinecourse/exam_result_bootstrap.html', context)
     
