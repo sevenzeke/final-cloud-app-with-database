@@ -137,11 +137,17 @@ def show_exam_result(request, course_id, submission_id):
     
     context = {}
     correct_choices = []
+    all_choices = []
     selected_choices = []
     unselected_choices = []
     total_points = 0
     overall_points = 0
     grade = 0
+
+    for q in questions:
+        q_choices = Choice.objects.filter(question=q)
+        for c in q_choices:
+            all_choices.append(c)
 
     for q in questions:
         overall_points = overall_points + q.grade
@@ -166,6 +172,7 @@ def show_exam_result(request, course_id, submission_id):
         grade = 0
 
     context['grade'] = grade
+    context['all_choices'] = all_choices
     context['correct_choices'] = correct_choices
     context['selected_choices'] = selected_choices
     context['unselected_choices'] = unselected_choices

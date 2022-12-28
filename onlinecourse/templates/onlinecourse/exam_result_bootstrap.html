@@ -53,20 +53,12 @@
             <div class="card mt-1">
                 <div class="card-header"><h5>{{ question.question_text }}</h5></div>
                     <div class="form-group">
-                        {% for choice in correct_choices %}
-                            {% if choice.question == question %}
+                        {% for choice in all_choices %}
+                            {% if choice.question == question and choice in correct_choices and choice in selected_choices %}
                             <div class="form-check"><h5 class="text-success">Correct Answer: {{ choice.choice_text }}</h5></div>
-                            {% endif %}
-                        {% endfor %}
-
-                        {% for choice in selected_choices %}
-                            {% if choice.question == question %}
+                            {% elif choice.question == question and choice not in correct_choices %}
                             <div class="form-check"><h5 class="text-dark">{{ choice.choice_text }}</h5></div>
-                            {% endif %}
-                        {% endfor %}
-
-                        {% for choice in correct_choices %}
-                            {% if choice.question == question and choice not in selected_choices %}
+                            {% elif choice.question == question and choice in correct_choices and choice not in selected_choices %}
                             <div class="form-check"><h5 class="text-warning">Not Selected: {{ choice.choice_text }}</h5></div>
                             {% endif %}
                         {% endfor %}
